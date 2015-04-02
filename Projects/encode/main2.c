@@ -74,28 +74,7 @@ int main(int argc, char* argv[])
 	if (video_st==NULL){
 		return -1;
 	}
-	pCodecCtx = video_st->codec;
-	pCodecCtx->codec_id = fmt->video_codec;
-	pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
-	pCodecCtx->pix_fmt = PIX_FMT_YUVJ420P;
 
-	pCodecCtx->width = 352;
-	pCodecCtx->height = 288;
-
-	pCodecCtx->time_base.num = 1;  
-	pCodecCtx->time_base.den = 25;   
-	//Output some information
-	av_dump_format(pFormatCtx, 0, out_file, 1);
-
-	pCodec = avcodec_find_encoder(pCodecCtx->codec_id);
-	if (!pCodec){
-		printf("Codec not found.");
-		return -1;
-	}
-	if (avcodec_open2(pCodecCtx, pCodec,NULL) < 0){
-		printf("Could not open codec.");
-		return -1;
-	}
 
 #if DECODE_FROM_VIDEO_FILE
 	// Open video file
@@ -126,12 +105,14 @@ int main(int argc, char* argv[])
 	// Get a pointer to the codec context for the video stream
 	pCodecCtx_de = pFormatCtx_de->streams[videoStream]->codec;
 
+
 	// Find the decoder for the video stream
 	pCodec_de = avcodec_find_decoder(pCodecCtx_de->codec_id);
 	if (pCodec_de == NULL) {
 		fprintf(stderr, "Unsupported codec!\n");
 		return -1; // Codec not found
 	}
+
 
 	// Open codec
 	if (avcodec_open2(pCodecCtx_de, pCodec_de, &optionsDict_de) < 0) {
@@ -146,6 +127,29 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "SDL: could not set video mode - exiting\n");
 		exit(1);
 	}
+	pCodecCtx = video_st->codec;
+	pCodecCtx->codec_id = fmt->video_codec;
+	pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
+	pCodecCtx->pix_fmt = PIX_FMT_YUVJ420P;
+
+	pCodecCtx->width = pCodecCtx_de->width;
+	pCodecCtx->height = pCodecCtx_de->height;
+
+	pCodecCtx->time_base.num = 1;  
+	pCodecCtx->time_base.den = 25;   
+	//Output some information
+	av_dump_format(pFormatCtx, 0, out_file, 1);
+
+	pCodec = avcodec_find_encoder(pCodecCtx->codec_id);
+	if (!pCodec){
+		printf("Codec not found.");
+		return -1;
+	}
+	if (avcodec_open2(pCodecCtx, pCodec,NULL) < 0){
+		printf("Could not open codec.");
+		return -1;
+	}
+
 
 	// Allocate a place to put our YUV image on that screen
 	bmp = SDL_CreateYUVOverlay(pCodecCtx_de->width, pCodecCtx_de->height, SDL_YV12_OVERLAY, screen);
@@ -154,7 +158,9 @@ int main(int argc, char* argv[])
 
 	// Read frames and save first five frames to disk
 	i = 0;
+	int y=0;
 	while(av_read_frame(pFormatCtx_de, &packet_de) >= 0) {
+	y++;
 		// Is this a packet from the video stream?
 		if (packet_de.stream_index == videoStream) {
 			// Decode video frame
@@ -178,8 +184,8 @@ int main(int argc, char* argv[])
 
 // encode -->
 	picture = av_frame_alloc();
-	//size = avpicture_get_size(pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height);
-	size = avpicture_get_size(pCodecCtx->pix_fmt, pCodecCtx_de->width, pCodecCtx_de->height);
+	size = avpicture_get_size(pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height);
+	//size = avpicture_get_size(pCodecCtx->pix_fmt, pCodecCtx_de->width, pCodecCtx_de->height);
 	picture_buf = (uint8_t *)av_malloc(size);
 	if (!picture_buf)
 	{
