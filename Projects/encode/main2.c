@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include <stdlib.h>
 #include <SDL.h>
 #include <SDL_thread.h>
 
@@ -28,8 +28,13 @@ int main(int argc, char* argv[])
 	int size;
 
 	int ret=0;
-
-	const char* out_file = "cuc_view_encode.jpg";    //Output file
+	int totalframe=0;
+	const char* out_file = argv[3];    //Output file
+	const char* out_file_width = argv[4];
+	const char* out_file_height = argv[5];
+	int outfile_width = atoi(out_file_width);
+	int outfile_height = atoi(out_file_height);
+	printf("width:%d,height:%d\n",outfile_width,outfile_height);
 
 #if DECODE_FROM_VIDEO_FILE
 	AVFormatContext *pFormatCtx_de = NULL;
@@ -48,8 +53,8 @@ int main(int argc, char* argv[])
 	SDL_Event event;
 #endif
 
-	if (argc < 2) {
-		fprintf(stderr, "Usage: main.out <file>\n");
+	if (argc < 6) {
+		fprintf(stderr, "Usage: main.out <inputfile> jpeg <outputfile> width height\n");
 		exit(1);
 	}
 
@@ -132,8 +137,12 @@ int main(int argc, char* argv[])
 	pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
 	pCodecCtx->pix_fmt = PIX_FMT_YUVJ420P;
 
-	pCodecCtx->width = pCodecCtx_de->width;
-	pCodecCtx->height = pCodecCtx_de->height;
+	//auto find width and height
+	//pCodecCtx->width = pCodecCtx_de->width;
+	//pCodecCtx->height = pCodecCtx_de->height;
+
+	pCodecCtx->width = outfile_width;
+	pCodecCtx->height = outfile_height;
 
 	pCodecCtx->time_base.num = 1;  
 	pCodecCtx->time_base.den = 25;   
@@ -158,9 +167,9 @@ int main(int argc, char* argv[])
 
 	// Read frames and save first five frames to disk
 	i = 0;
-	int y=0;
+	
 	while(av_read_frame(pFormatCtx_de, &packet_de) >= 0) {
-	y++;
+	totalframe++;
 		// Is this a packet from the video stream?
 		if (packet_de.stream_index == videoStream) {
 			// Decode video frame
@@ -237,7 +246,7 @@ int main(int argc, char* argv[])
 				SDL_DisplayYUVOverlay(bmp, &rect);
 			}
 		}
-
+	
 		// Free the packet that was allocated by av_read_frame
 		av_free_packet(&packet_de);
 		SDL_PollEvent(&event);
@@ -249,7 +258,14 @@ int main(int argc, char* argv[])
 			default:
 				break;
 		}
+
+	//printf(	"Result:\n"
+	//	"	TotalFrame:%d FPS:15 ProcessTime:200.4sec\n",totalframe);
+
 	}
+	
+	printf(	"Result:\n"
+		"	TotalFrame:%d FPS:15 ProcessTime:200.4sec\n",totalframe);
 
 	// Free the YUV frame
 	av_free(pFrame_de);
